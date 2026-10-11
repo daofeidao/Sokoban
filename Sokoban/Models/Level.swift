@@ -1,15 +1,20 @@
 import Foundation
 
-/// 一个关卡：名字 + 原始文本行。
+/// 一个关卡：名字 + 原始文本行 + 最优步数。
 struct Level {
     let name: String
     let rows: [String]
 
+    /// BFS 算出来的最少步数，由 `scripts/verify_levels.ps1` 复核。
+    /// `nil` 表示没标，界面就不显示"最优"。
+    let par: Int?
+
     var width: Int { rows.first?.count ?? 0 }
     var height: Int { rows.count }
 
-    init(name: String, rows: [String]) {
+    init(name: String, rows: [String], par: Int? = nil) {
         self.name = name
+        self.par = par
         // 关卡文本最容易被编辑器改动的地方就是行尾空格。
         // 统一补齐到最宽的一行，保证一定是矩形。
         self.rows = Level.rectangular(rows)

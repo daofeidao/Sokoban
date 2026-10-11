@@ -8,3 +8,6 @@ xcuserdata/
 .swiftpm/
 .build/
 *.dSYM/
+
+# 图标由 scripts/generate-app-icon.swift 在 CI 上生成，不入库
+Sokoban/Assets.xcassets/

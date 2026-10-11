@@ -25,9 +25,9 @@ struct GameView: View {
                 .overlay(alignment: .bottom) { solvedOverlay }
             Spacer(minLength: 0)
             ControlPad(
-                onMove: { game.move($0) },
-                onUndo: { game.undo() },
-                onReset: { game.reset() },
+                onMove: { step($0) },
+                onUndo: { game.undo(); Haptics.tap() },
+                onReset: { game.reset(); Haptics.tap() },
                 canUndo: game.canUndo
             )
             .padding(.bottom, 8)
@@ -45,6 +45,9 @@ struct GameView: View {
             HStack(spacing: 18) {
                 counter("步数", game.moveCount)
                 counter("推动", game.pushCount)
+                if let par = game.level.par {
+                    counter("最优", par)
+                }
             }
             .font(.system(size: 13))
             .foregroundColor(.secondary)
@@ -87,9 +90,10 @@ struct GameView: View {
         Group {
             if game.solved {
                 VStack(spacing: 8) {
-                    Text("过关！一共推了 \(game.pushCount) 次")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
+                    Text("过关！").font(.system(size: 18, weight: .bold)).foregroundColor(.white)
+                    Text(summary)
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.92))
                     if index + 1 < levels.count {
                         Button("下一关") { select(index + 1) }
                             .font(.system(size: 15, weight: .semibold))
@@ -110,6 +114,15 @@ struct GameView: View {
         }
     }
 
+    /// 过关时的成绩单：跟最优步数比一比。
+    private var summary: String {
+        guard let par = game.level.par else {
+            return "\(game.moveCount) 步"
+        }
+        if game.moveCount <= par { return "\(game.moveCount) 步 · 踩到最优" }
+        return "\(game.moveCount) 步 · 最优 \(par)"
+    }
+
     // MARK: - 手势 / 动作
 
     private var swipe: some Gesture {
@@ -118,16 +131,36 @@ struct GameView: View {
                 let dx = value.translation.width
                 let dy = value.translation.height
                 if abs(dx) > abs(dy) {
-                    game.move(dx > 0 ? .right : .left)
+                    step(dx > 0 ? .right : .left)
                 } else {
-                    game.move(dy > 0 ? .down : .up)
+                    step(dy > 0 ? .down : .up)
                 }
             }
+    }
+
+    /// 走一步，并按"有没有真的动 / 有没有推动箱子"给不同强度的震动。
+private func step(_ dir: Direction) {
+        let movesBefore = game.moveCount
+        let pushesBefore = game.pushCount
+
+        game.move(dir)
+
+        // 被墙或被自己顶住 —— 这一步没成立，不该有任何反馈
+        guard game.moveCount != movesBefore else { return }
+
+        if game.solved {
+            Haptics.success()
+        } else if game.pushCount != pushesBefore {
+            Haptics.push()
+        } else {
+            Haptics.tap()
+        }
     }
 
     private func select(_ i: Int) {
         guard levels.indices.contains(i) else { return }
         guard game.load(levels[i]) else { return }
         index = i
+        Haptics.tap()
     }
 }

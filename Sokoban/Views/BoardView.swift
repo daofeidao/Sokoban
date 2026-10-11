@@ -65,9 +65,59 @@ struct BoardView: View {
         }
 
         if pos == game.player {
+            drawPlayer(in: rect, cell: cell, ctx: &ctx)
+        }
+    }
+
+    /// 小人：一个胶囊形身体 + 一个圆脑袋。
+    /// 用胶囊而不是圆弧拼接，缩到 30pt 也不会画歪。
+    private func drawPlayer(in rect: CGRect, cell: CGFloat, ctx: inout GraphicsContext) {
+        let w = rect.width
+        let h = rect.height
+
+        let body = CGRect(
+            x: rect.minX + w * 0.26,
+            y: rect.minY + h * 0.46,
+            width: w * 0.48,
+            height: h * 0.44
+        )
+        let shirt = Color(red: 0.20, green: 0.50, blue: 0.95)
+        ctx.fill(
+            Path(roundedRect: body, cornerRadius: body.width / 2),
+            with: .color(shirt)
+        )
+        ctx.stroke(
+            Path(roundedRect: body, cornerRadius: body.width / 2),
+            with: .color(Color.white.opacity(0.85)),
+            lineWidth: max(cell * 0.035, 1)
+        )
+
+        let headSize = w * 0.42
+        let head = CGRect(
+            x: rect.midX - headSize / 2,
+            y: rect.minY + h * 0.06,
+            width: headSize,
+            height: headSize
+        )
+        ctx.fill(
+            Path(ellipseIn: head),
+            with: .color(Color(red: 0.99, green: 0.85, blue: 0.66))
+        )
+        ctx.stroke(
+            Path(ellipseIn: head),
+            with: .color(Color(red: 0.45, green: 0.30, blue: 0.18, opacity: 0.9)),
+            lineWidth: max(cell * 0.035, 1)
+        )
+
+        // 眼睛：两个小点，缩到很小也还看得出朝向
+        let eye = head.width * 0.16
+        let eyeY = head.midY - eye * 0.5
+        let offset = head.width * 0.17
+        for sign in [-1.0, 1.0] {
+            let x = head.midX + CGFloat(sign) * offset - eye / 2
             ctx.fill(
-                Path(ellipseIn: inner.insetBy(dx: cell * 0.14, dy: cell * 0.14)),
-                with: .color(Color.blue)
+                Path(ellipseIn: CGRect(x: x, y: eyeY, width: eye, height: eye)),
+                with: .color(Color(red: 0.16, green: 0.12, blue: 0.08))
             )
         }
     }

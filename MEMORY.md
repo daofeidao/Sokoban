@@ -20,18 +20,29 @@
 
 ---
 
-## 二、当前状态：v0.1.0 已构建成功，等待真机验收
+## 二、当前状态
 
-- **仓库已建**：`https://github.com/daofeidao/Sokoban`（公开，与 TT 一致）
-- **CI 首次构建即通过**（run #1），`Build app` 一步成功 → **代码零编译错误**
-- IPA：`Sokoban-v0.1.0.B1.ipa`，73,002 B，Release tag `build-1`
-- 已放到 `E:\下载\Sokoban-v0.1.0.B1.ipa`
-- **还没做的**：装到 iPhone 上实机验收（UI 手感、关卡可解性、撤销是否顺手）
+- **仓库**：`https://github.com/daofeidao/Sokoban`（公开）
+- **版本**：v0.2.0（12 关 + 图标 + 小人 + 震动 + 最优步数）
+- 每次 push 触发 CI：校验关卡 → 生成图标 → xcodegen → xcodebuild → 打 IPA 发 Release
+- IPA 命名 `Sokoban-v<版本>.B<构建号>.ipa`，交付后放进 `E:\下载`
 
-验证过的构建产物信息：
-- `MinimumOSVersion` = 15.0 ✅
-- Bundle ID `com.daofeidao.Sokoban`，版本 `0.1.0` ✅
-- **没有 App 图标**（IPA 里只有 5 个条目，无 `Assets.xcassets`）。能装，但桌面上是空白默认图标。要好看得补图标。
+已验证的构建产物信息：
+- `MinimumOSVersion` = 15.0
+- Bundle ID `com.daofeidao.Sokoban`
+- 图标由 `scripts/generate-app-icon.swift` 在 CI 上用 AppKit 画，**不入 git**
+  （`Sokoban/Assets.xcassets/` 已在 .gitignore 里）
+
+### 关卡表（par = BFS 算出的最优步数）
+
+| # | 名称 | 步数 |
+|---|---|---|
+| 1~7 | 第一步 / 推两步 / 两个箱子 / 绕一下 / 让开自己 / 窄道 / 对角 | 1 / 4 / 7 / 8 / 10 / 16 / 13 |
+| 8 | 死角 | 13 |
+| 9 | 三连 | 14 |
+| 10 | 四连 | 16 |
+| 11 | 长途 | 18 |
+| 12 | 仓库 | 20 |
 
 ---
 
@@ -60,10 +71,27 @@
 
 ## 五、待办
 
-- [ ] **在 iPhone 13 Pro Max 上实机验收**（最高优先级）
-- [ ] 补 App 图标（现在是空白默认图标）
-- [ ] 加关卡（现在 7 关，难度曲线没调过，第 4 关偏长）
-- [ ] 想想要不要加：最佳步数记录、关卡进度存档、音效
+- [ ] 在 iPhone 13 Pro Max 上验收 v0.2.0（图标、小人、震动手感、8~12 关难度）
+- [ ] 关卡还能往 25 步以上加，但**求解器在 PowerShell 里跑到 30 万状态就慢了**，
+      再大的关需要换个更快的验证方式
+- [ ] 想想要不要加：关卡进度存档（解锁到第几关）、最佳成绩记录、过关音效
+
+---
+
+## 五之二、加关卡的正确流程
+
+```powershell
+# 1) 在 Sokoban/Data/Levels.swift 里追加一条，par 先随便填
+# 2) 跑校验，它会告诉你真实最优步数，也会指出 par 填错了
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify_levels.ps1 -ShowWalkthrough
+# 3) 把 par 改成它报出来的数字，再跑一遍确认全绿
+# 4) 提交推送，CI 会再验一次才出包
+```
+
+校验器现在会同时检查三件事，**任何一项不过 CI 就红**：
+关卡可解、状态空间没爆、`par` 和 BFS 结果一致。
+
+超过 25 步会标 `LONG`（可解但多半不好玩），状态空间超限标 `SKIP`（没证明，不拦）。
 
 ---
 
