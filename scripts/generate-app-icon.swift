@@ -11,6 +11,7 @@ let iconDir = root.appendingPathComponent("Sokoban/Assets.xcassets/AppIcon.appic
 try FileManager.default.createDirectory(at: iconDir, withIntermediateDirectories: true)
 
 let size = 1024
+let side = CGFloat(size)
 guard let bitmap = NSBitmapImageRep(
     bitmapDataPlanes: nil,
     pixelsWide: size,
@@ -30,7 +31,7 @@ let context = NSGraphicsContext(bitmapImageRep: bitmap)!
 NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = context
 context.imageInterpolation = .high
-let rect = NSRect(x: 0, y: 0, width: size, height: size)
+let rect = NSRect(x: 0, y: 0, width: side, height: side)
 
 func rgb(_ r: Double, _ g: Double, _ b: Double, _ a: Double = 1) -> NSColor {
     NSColor(calibratedRed: r, green: g, blue: b, alpha: a)
@@ -47,11 +48,11 @@ NSGradient(colors: [
 let grid = NSBezierPath()
 grid.lineWidth = 10
 for i in 1..<4 {
-    let p = CGFloat(i) * size / 4
+    let p = CGFloat(i) * side / 4
     grid.move(to: NSPoint(x: p, y: 0))
-    grid.line(to: NSPoint(x: p, y: size))
+    grid.line(to: NSPoint(x: p, y: side))
     grid.move(to: NSPoint(x: 0, y: p))
-    grid.line(to: NSPoint(x: size, y: p))
+    grid.line(to: NSPoint(x: side, y: p))
 }
 rgb(1, 1, 1, 0.05).setStroke()
 grid.stroke()
