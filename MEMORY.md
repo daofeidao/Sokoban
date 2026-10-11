@@ -20,15 +20,18 @@
 
 ---
 
-## 二、⚠️ 当前状态：代码写完了，但**一次都没编译过**
+## 二、当前状态：v0.1.0 已构建成功，等待真机验收
 
-本机是 Windows、没有 Xcode，`swiftc` 跑不了。所以：
+- **仓库已建**：`https://github.com/daofeidao/Sokoban`（公开，与 TT 一致）
+- **CI 首次构建即通过**（run #1），`Build app` 一步成功 → **代码零编译错误**
+- IPA：`Sokoban-v0.1.0.B1.ipa`，73,002 B，Release tag `build-1`
+- 已放到 `E:\下载\Sokoban-v0.1.0.B1.ipa`
+- **还没做的**：装到 iPhone 上实机验收（UI 手感、关卡可解性、撤销是否顺手）
 
-- 下面的代码是**照着 iOS 15 的 API 写的，但没有任何编译验证**
-- 可能存在编译错误，第一次 CI 构建大概率要修一两处
-- **别假设它能编过。** 推上去看 CI 日志为准
-
-**还没做的事**：GitHub 上还没建仓库，没建远端，没跑过第一次 CI。
+验证过的构建产物信息：
+- `MinimumOSVersion` = 15.0 ✅
+- Bundle ID `com.daofeidao.Sokoban`，版本 `0.1.0` ✅
+- **没有 App 图标**（IPA 里只有 5 个条目，无 `Assets.xcassets`）。能装，但桌面上是空白默认图标。要好看得补图标。
 
 ---
 
@@ -57,16 +60,47 @@
 
 ## 五、待办
 
-- [ ] 建 GitHub 仓库、推上去、跑通第一次 CI
-- [ ] 在 iPhone 13 Pro Max 上实机验收
-- [ ] 加关卡（现在是 7 关，难度曲线还没调过，第 4 关偏长）
+- [ ] **在 iPhone 13 Pro Max 上实机验收**（最高优先级）
+- [ ] 补 App 图标（现在是空白默认图标）
+- [ ] 加关卡（现在 7 关，难度曲线没调过，第 4 关偏长）
 - [ ] 想想要不要加：最佳步数记录、关卡进度存档、音效
 
 ---
 
-## 六、已知的坑
+## 六、这个仓库的推送方式（跟别的项目不一样）
+
+`github.com` 主站在这台机器上**连不上**（`Failed to connect` / `Connection was reset`），
+但 `api.github.com` 正常。所以 `git push` 一定失败，**必须走 REST API**：
+
+| 步骤 | 做法 |
+|---|---|
+| 0 | `git init -b main` + `add` + `commit`（本地历史照常有） |
+| 1 | **空仓库必须先用 Contents API 播种一次**：`PUT /repos/OWNER/REPO/contents/<任意文件名>` |
+| 2 | 每个文件 `POST /git/blobs`，content 走 **base64**（绕开 PowerShell 编码坑） |
+| 3 | `POST /git/trees`（不传 `base_tree`） |
+| 4 | `POST /git/commits`，parents 指向播种 commit |
+| 5 | **`PATCH /git/refs/heads/<branch>`** —— ref 已存在，POST 会 422 |
+
+踩过的坑：
+
+- **空仓库里不能直接建 blob**，会 409 `Git Repository is empty`。必须先播种。
+- **播种时不要传 `branch` 字段**。空仓库里分支还不存在，传了直接 404。不传才会自动建 `main`。
+- **ref 已存在要用 PATCH，POST 会 422** `Reference already exists`。
+- 中文文件内容一律 base64 走 blob，**不要用 `Set-Content`**。
+- 现成脚本：`C:\Users\lion\AppData\Local\Temp\opencode\push_api_tree.ps1`
+  （临时目录会丢，重写时照着第四节「网络」那条来）
+- 本地 git 不在 PATH，每次先设：
+  `$env:PATH = "C:\Program Files\GitHub CLI;C:\Program Files\Git\bin;$env:PATH"`
+- **注意**：本地 `git log` 和 GitHub 上的 commit sha **对不上**。REST API 建的是另一条历史链，
+  本地 `origin/main` 还指着空仓库的起点。下次要同步得 `git fetch` + 处理分叉，或者干脆
+  重新 `git init`。别被这个搞混。
+
+---
+
+## 七、已知的坑（项目自身）
 
 - **关卡必须箱子和目标点数量相等、且有 `@`**，否则启动时会被校验跳过。
   加关卡时先自己数一遍。启动日志里会打印跳过原因。
 - 行尾空格不用管，`Level` 会自动补齐成矩形。**但有的编辑器会自动删行尾空格，
   这不影响**（被删的位会自动补回地板）。
+- 关卡 4「绕一下」步数偏长（20 步以上），难度曲线待调。
