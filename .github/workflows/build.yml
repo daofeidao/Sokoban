@@ -1,0 +1,63 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build app
+        run: |
+          xcodebuild \
+            -project Sokoban.xcodeproj \
+            -scheme Sokoban \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/dd \
+            CODE_SIGNING_ALLOWED=NO \
+            CURRENT_PROJECT_VERSION=${GITHUB_RUN_NUMBER} \
+            build
+
+      - name: Package IPA
+        id: pkg
+        run: |
+          APP=$(find build/dd/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app')
+          APP_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          IPA_NAME="Sokoban-v${APP_VERSION}.B${GITHUB_RUN_NUMBER}.ipa"
+          echo "IPA_NAME=${IPA_NAME}" >> "$GITHUB_ENV"
+          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_OUTPUT"
+          mkdir -p Payload
+          cp -R "$APP" "Payload/"
+          zip -qry "$IPA_NAME" Payload
+          rm -rf Payload
+          test -s "$IPA_NAME"
+          unzip -l "$IPA_NAME"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Sokoban build ${{ github.run_number }}
+          body: |
+            推箱子 Sokoban v${{ steps.pkg.outputs.APP_VERSION }}，构建 B${{ github.run_number }}。
+            IPA 文件名见附件。
+          files: |
+            ${{ env.IPA_NAME }}
+          draft: false
+          prerelease: true
+          generate_release_notes: false

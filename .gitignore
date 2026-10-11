@@ -1,0 +1,10 @@
+build/
+DerivedData/
+*.xcodeproj/
+*.ipa
+.DS_Store
+xcuserdata/
+*.xcuserstate
+.swiftpm/
+.build/
+*.dSYM/
